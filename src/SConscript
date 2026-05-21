@@ -16,8 +16,24 @@ qt_modules = ["Widgets", "Gui", "Core", "Concurrent", "DBus", "Svg", "OpenGL", "
 
 qt_libs = []
 qt_host_bins = ""
+qt_root = os.environ.get("CABANA_QT_ROOT")
 
-if arch == "Darwin":
+if qt_root:
+    qt_install_prefix = os.path.join(qt_root, "usr")
+    qt_install_headers = os.path.join(qt_install_prefix, "include", "x86_64-linux-gnu", "qt6")
+    qt_host_bins = os.path.join(qt_install_prefix, "lib", "qt6", "libexec")
+
+    qt_env["QTDIR"] = qt_install_prefix
+    qt_dirs = [qt_install_headers]
+    qt_dirs += [f"{qt_install_headers}/Qt{m}" for m in qt_modules]
+    qt_libs = [f"Qt6{m}" for m in qt_modules]
+    qt_libs += ["GL"]
+
+    qt_lib_path = os.path.join(qt_install_prefix, "lib", "x86_64-linux-gnu")
+    qt_env.Append(LIBPATH=[qt_lib_path])
+    qt_env.AppendENVPath("PATH", qt_host_bins)
+    qt_env.AppendENVPath("LD_LIBRARY_PATH", qt_lib_path)
+elif arch == "Darwin":
     brew_prefix = subprocess.check_output(['brew', '--prefix'], encoding='utf8').strip()
     qt_env['QTDIR'] = f"{brew_prefix}/opt/qt@6"
     qt_dirs = [os.path.join(qt_env['QTDIR'], "include")]
