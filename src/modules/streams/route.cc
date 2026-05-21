@@ -1,16 +1,56 @@
 #include "route.h"
 
 #include <QApplication>
+#include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRegularExpression>
 
 #include "core/streams/replay_stream.h"
 #include "modules/settings/settings.h"
 #include "route_browser.h"
+
+namespace {
+
+bool parseSegmentDirName(const QString& name, QString* route_name = nullptr) {
+  static const QRegularExpression segment_rx(R"(^(.{20})--\d+$)");
+  auto match = segment_rx.match(name);
+  if (!match.hasMatch()) return false;
+  if (route_name) *route_name = match.captured(1);
+  return true;
+}
+
+bool resolveLocalRoute(QString route_path, QString& route, QString& data_dir) {
+  QFileInfo info(route_path);
+  if (!info.exists()) return false;
+
+  QString route_name;
+  if (info.isDir() && parseSegmentDirName(info.fileName(), &route_name)) {
+    route = route_name;
+    data_dir = info.dir().absolutePath() + "/";
+    return true;
+  }
+
+  if (info.isDir()) {
+    QDir dir(info.absoluteFilePath());
+    for (const QFileInfo& child : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+      if (parseSegmentDirName(child.fileName(), &route_name)) {
+        route = route_name;
+        data_dir = dir.absolutePath() + "/";
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+}  // namespace
 
 RouteWidget::RouteWidget(QWidget* parent) : AbstractStreamWidget(parent) {
   QGridLayout* grid_layout = new QGridLayout(this);
@@ -50,7 +90,9 @@ RouteWidget::RouteWidget(QWidget* parent) : AbstractStreamWidget(parent) {
 AbstractStream* RouteWidget::open() {
   QString route = route_edit->text();
   QString data_dir;
-  if (int idx = route.lastIndexOf('/'); idx != -1 && util::file_exists(route.toStdString())) {
+  bool local_route_resolved = resolveLocalRoute(route, route, data_dir);
+  if (!local_route_resolved && route.lastIndexOf('/') != -1 && util::file_exists(route.toStdString())) {
+    int idx = route.lastIndexOf('/');
     data_dir = route.mid(0, idx + 1);
     route = route.mid(idx + 1);
   }
