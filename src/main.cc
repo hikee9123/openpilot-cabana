@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QFileInfo>
 
 #include "core/streams/device_stream.h"
 #include "core/streams/panda_stream.h"
@@ -78,7 +79,9 @@ int main(int argc, char* argv[]) {
 
   AbstractStream* stream = createStream(parser, &app);
   {
-    MainWindow w(stream, parser.value("dbc"));
+    QString dbc_file = parser.value("dbc");
+    if (dbc_file.isEmpty() && QFileInfo::exists(Settings::defaultDbcFile())) dbc_file = Settings::defaultDbcFile();
+    MainWindow w(stream, dbc_file);
     app.exec();
   }
   return 0;

@@ -22,6 +22,9 @@ class Settings : public QObject {
   Settings();
   ~Settings();
 
+  static QString defaultDbcFile();
+  static QString defaultRouteDir();
+
   bool absolute_time = false;
   int fps = 10;
   int max_cached_minutes = 30;

@@ -1,6 +1,7 @@
 #include "stream_selector.h"
 
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QLabel>
 #include <QPushButton>
 
@@ -23,6 +24,7 @@ StreamSelector::StreamSelector(QWidget* parent) : QDialog(parent) {
   dbc_file = new QLineEdit(this);
   dbc_file->setReadOnly(true);
   dbc_file->setPlaceholderText(tr("Choose a dbc file to open"));
+  if (QFileInfo::exists(Settings::defaultDbcFile())) dbc_file->setText(Settings::defaultDbcFile());
   QPushButton* browse_btn = new QPushButton(tr("Browse..."));
   dbc_layout->addWidget(new QLabel(tr("dbc File")));
   dbc_layout->addWidget(dbc_file);
@@ -62,7 +64,8 @@ StreamSelector::StreamSelector(QWidget* parent) : QDialog(parent) {
     setEnabled(true);
   });
   connect(browse_btn, &QPushButton::clicked, [this]() {
-    QString fn = QFileDialog::getOpenFileName(this, tr("Open File"), settings.last_dir, "DBC (*.dbc)");
+    QString start_path = !dbc_file->text().isEmpty() ? dbc_file->text() : settings.last_dir;
+    QString fn = QFileDialog::getOpenFileName(this, tr("Open File"), start_path, "DBC (*.dbc)");
     if (!fn.isEmpty()) {
       dbc_file->setText(fn);
       settings.last_dir = QFileInfo(fn).absolutePath();

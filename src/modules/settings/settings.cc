@@ -1,6 +1,7 @@
 #include "modules/settings/settings.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QSettings>
 #include <QStandardPaths>
 #include <type_traits>
@@ -8,6 +9,14 @@
 #include "utils/util.h"
 
 Settings settings;
+
+QString Settings::defaultDbcFile() {
+  return QDir::current().absoluteFilePath("data/opendbc/hyundai_kia_generic.dbc");
+}
+
+QString Settings::defaultRouteDir() {
+  return QDir::home().absoluteFilePath(".comma/media/0/realdata");
+}
 
 template <class SettingOperation>
 void settings_op(SettingOperation op) {
@@ -38,12 +47,15 @@ void settings_op(SettingOperation op) {
 }
 
 Settings::Settings() {
-  last_dir = last_route_dir = QDir::homePath();
+  last_dir = QFileInfo(defaultDbcFile()).absolutePath();
+  last_route_dir = QDir(defaultRouteDir()).exists() ? defaultRouteDir() : QDir::homePath();
   log_path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/cabana_live_stream/";
   settings_op([](QSettings& s, const QString& key, auto& value) {
     if (auto v = s.value(key); v.canConvert<std::decay_t<decltype(value)>>())
       value = v.value<std::decay_t<decltype(value)>>();
   });
+  if (QFileInfo::exists(defaultDbcFile())) last_dir = QFileInfo(defaultDbcFile()).absolutePath();
+  if (QDir(defaultRouteDir()).exists()) last_route_dir = defaultRouteDir();
 }
 
 Settings::~Settings() {
